@@ -45,7 +45,54 @@ def course_details(code):
         return redirect(url_for('course_catalog'))
     return render_template('course_details.html', course=course)
 
+@app.route('/add_course', methods = ["GET","POST"])
+def add_course():
+    if request.method == "POST":
+        course_code = request.form.get('code')
+        course_name = request.form.get('name')
+        instructor = request.form.get('instructor')
+        semester = request.form.get('semester')
+        schedule = request.form.get('schedule')
+        classroom = request.form.get('classroom')
+        prerequisites = request.form.get('prerequisites')
+        grading = request.form.get('grading')
+        description = request.form.get('description')
 
+        new_course = {
+            'code': course_code,
+            'name': course_name,
+            'instructor': instructor,
+            'semester': semester,
+            'schedule': schedule,
+            'classroom': classroom,
+            'prerequisites': prerequisites,
+            'grading': grading,
+            'description': description
+        }
+
+        courses = load_courses()
+        for course in courses:
+            if course['code'] == new_course['code']:
+                return render_template('add_course.html', message="Course code already exists.")
+            
+        save_courses(new_course)
+
+        flash(f"Course with code {course_code} has been added.", "Success")
+        return redirect(url_for('course_catalog'))
+    
+    return render_template('add_course.html')
+
+@app.route('/delete_course/<code>', methods = ["GET", "POST"])
+def delete_course(code):
+
+    courses = load_courses()
+    updated_courses = [course for course in courses if course['code'] != code]
+
+    with open(COURSE_FILE, 'w') as file:
+        json.dump(updated_courses, file, indent=4)
+
+    flash(f"Course with code {code} has been deleted.", "success")
+    return redirect(url_for('course_catalog'))
 
 if __name__ == '__main__':
     app.run(debug=True)
