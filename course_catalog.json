@@ -20,5 +20,49 @@
         "prerequisites": "Basic Python, Linux",
         "grading": "50% Assignment, 50% Quiz",
         "description": ""
+    },
+    {
+        "code": "CS 201",
+        "name": "Theory of Computing",
+        "instructor": "Bireswar Das",
+        "semester": "Fall 2025",
+        "schedule": "",
+        "classroom": "AB 10/201",
+        "prerequisites": "",
+        "grading": "",
+        "description": ""
+    },
+    {
+        "code": "CS 303",
+        "name": "Mathematical Foundations for AI",
+        "instructor": "Manisha",
+        "semester": "Fall 2025",
+        "schedule": "",
+        "classroom": "",
+        "prerequisites": "",
+        "grading": "",
+        "description": ""
+    },
+    {
+        "code": "EE 299",
+        "name": "Project on LLM",
+        "instructor": "Nihar Ranjan",
+        "semester": "Fall 2025",
+        "schedule": "Tuesday",
+        "classroom": "Room",
+        "prerequisites": "ML, Python",
+        "grading": "9 or 10",
+        "description": "Project Course"
+    },
+    {
+        "code": "dfd",
+        "name": "vfsd",
+        "instructor": "",
+        "semester": "",
+        "schedule": "",
+        "classroom": "",
+        "prerequisites": "",
+        "grading": "",
+        "description": ""
     }
 ]

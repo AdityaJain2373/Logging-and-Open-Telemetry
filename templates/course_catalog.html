@@ -11,6 +11,14 @@
         </li>
     {% endfor %}
 </ul>
-<a href="{{ url_for('add_course') }}" class="btn btn-primary">Add Course</a>
+<div style="min-height: 50vh; display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <a href="{{ url_for('add_course') }}" class="btn btn-primary">Add Course</a>
+    </div>
+  
+    <div>
+      <a href="{{ url_for('index') }}">Main Menu</a>
+    </div>
+  </div>
 {% endblock %}
 
