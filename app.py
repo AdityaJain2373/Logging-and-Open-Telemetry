@@ -5,9 +5,12 @@ from opentelemetry import trace
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.trace import SpanKind
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 import logging
+import time
+from collections import defaultdict
+requests_count = defaultdict(int)
+error_count = defaultdict(int)
 
 
 app = Flask(__name__)
@@ -23,6 +26,7 @@ FlaskInstrumentor().instrument_app(app, excluded_urls = excluded_urls_string)
 resource = Resource(attributes = {
     "service.name" : "course_management_service"
 })
+
 
 trace.set_tracer_provider(TracerProvider(resource = resource))
 console_exporter = ConsoleSpanExporter()
@@ -59,18 +63,29 @@ def index():
         span.set_attribute("request.method", request.method)
         span.set_attribute("user.ip", request.remote_addr)
         return render_template('index.html')
+    
 
 @app.route('/catalog')
 def course_catalog():
+    start_time = time.time()
+    requests_count['catalog'] += 1
     with tracer.start_as_current_span("Course catalog") as span:
         span.set_attribute("operations", "render_course_catalog")
         courses = load_courses()
         span.set_attribute("num_courses", len(courses))
+        span.set_attribute("processing_time", time.time() - start_time)
+        logger.info({
+            "event": "Catalog page rendered",  
+            "route": "/catalog",  
+            "total_courses": len(courses),  
+            "processing_time": time.time() - start_time 
+        })
         return render_template('course_catalog.html', courses=courses)
 
 
 @app.route('/course/<code>')
 def course_details(code):
+    start_time = time.time()
     with tracer.start_as_current_span("Course details page") as span:
         span.set_attribute("operations", "render_course_details")
         span.set_attribute("request.method", request.method)
@@ -79,15 +94,23 @@ def course_details(code):
         courses = load_courses()
         course = next((course for course in courses if course['code'] == code), None)
         if not course:
+            span.add_event("Course not found")
             flash(f"No course found with code '{code}'.", "error")
             return redirect(url_for('course_catalog'))
+        span.add_event("Course details accessed")
         span.set_attribute("course.name", course['name'])
-        logger.info(f"Course details page of course {code} has been accessed.")
+        logger.info({
+            "event": "Course Details Rendered",
+            "course_code": code, 
+            "processing_time": time.time() - start_time  
+        })
         return render_template('course_details.html', course=course)
 
 
 @app.route('/add_course', methods = ["GET","POST"])
 def add_course():
+    start_time = time.time()
+    requests_count['add_course'] += 1
     if request.method == "POST":
         with tracer.start_as_current_span("AddCourse") as span:
             span.set_attribute("operation", "add_course")
@@ -104,8 +127,14 @@ def add_course():
             grading = request.form.get('grading')
             description = request.form.get('description')
 
-            if not course_code or not course_name :
-                logger.error("Missing required fields: course_code or course_name.")
+            if not course_code or not course_name:
+                error_count['add_course'] += 1 
+                span.set_attribute("error_count", error_count['add_course'])
+                logger.warning({
+                    "event": "Form Validation Error", 
+                    "route": "/add_course",  
+                    "error": "Missing required fields"  
+                })
                 flash("Course code and name are required.", "error")
                 span.set_attribute("status", "failed")
                 return render_template('add_course.html')
@@ -129,9 +158,14 @@ def add_course():
                     return render_template('add_course.html', message="Course code already exists.")
             
             save_courses(new_course)
-
+            span.add_event("Course added")
+            span.set_attribute("processing time", time.time() - start_time)
             flash(f"Course with code {course_code} has been added.", "Success")
-            logger.info(f"course {course_name} with course code {course_code} added successfully.")
+            logger.info({
+                "event": "Course Added", 
+                "course_code": course_code, 
+                "course_name": course_name 
+            })
             span.set_attribute("status", "success")
             span.set_attribute("course.name", course_name)
             span.set_attribute("course.code", course_code)
@@ -142,6 +176,7 @@ def add_course():
 
 @app.route('/delete_course/<code>', methods = ["GET", "POST"])
 def delete_course(code):
+    requests_count['delete course'] += 1
     with tracer.start_as_current_span("DeleteCourse") as span:
         span.set_attribute("operation", "delete_course")
         span.set_attribute("request.method", request.method)
@@ -155,7 +190,11 @@ def delete_course(code):
             json.dump(updated_courses, file, indent=4)
 
         flash(f"Course with code {code} has been deleted.", "success")
-        logger.info(f"Course with code {code} has been deleted successfully.")
+        logger.info({
+                "event": "Course Deleted", 
+                "course_code": code
+            })
+        span.add_event("Course deleted successfully")
         span.set_attribute("status", "success")
         span.set_attribute("course.code", code)
     return redirect(url_for('course_catalog'))
